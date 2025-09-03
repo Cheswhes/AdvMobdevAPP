@@ -1,14 +1,17 @@
-
-
-Ray Martin Pavillar AdvMobileDev
+Ray Martin Pavillar 
+AdvMobileDev
 
 
 Assignment 2:
+
 
 <img width="429" height="805" alt="Screenshot 2025-09-03 221652" src="https://github.com/user-attachments/assets/4e527bed-ec11-46ed-a7e3-86d483d6bcab" />
 
 
 Assignment 3:
+
+
+
 <img width="419" height="737" alt="image" src="https://github.com/user-attachments/assets/cc4c1cc8-1ffd-47da-ad38-57fba8ad5af7" />
 
 
