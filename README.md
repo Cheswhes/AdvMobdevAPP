@@ -15,6 +15,13 @@ Assignment 3:
 <img width="419" height="737" alt="image" src="https://github.com/user-attachments/assets/cc4c1cc8-1ffd-47da-ad38-57fba8ad5af7" />
 
 
+Week 2 Act 2:
+
+<img width="404" height="843" alt="image" src="https://github.com/user-attachments/assets/4fee6bee-239a-4d37-82fc-6b1f4042d64c" />
+<img width="405" height="851" alt="image" src="https://github.com/user-attachments/assets/264e5024-4fbf-47f3-938d-7ab54ab5303b" />
+<img width="405" height="851" alt="image" src="https://github.com/user-attachments/assets/cc803e8a-d7cc-4e17-9b07-9c78e7da5125" />
+
+
 
 
 
