@@ -4,90 +4,77 @@ import {
   Text,
   StyleSheet,
   SafeAreaView,
-  ScrollView,
+  FlatList,
   Image,
   TouchableOpacity,
-  FlatList,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
 
-type Track = {
+type Playlist = {
   id: string;
   title: string;
-  artist: string;
-  duration: string;
+  owner: string;
+  image: string;
 };
 
-const tracks: Track[] = [
-  { id: "1", title: "Intro - Chill Vibes", artist: "DJ LoFi", duration: "2:35" },
-  { id: "2", title: "Coding Mode", artist: "Beat Lab", duration: "3:42" },
-  { id: "3", title: "Focus Flow", artist: "Chillhop", duration: "4:11" },
-  { id: "4", title: "Night Drive", artist: "Synthwave X", duration: "5:03" },
-  { id: "5", title: "Coffee Beats", artist: "Morning Mix", duration: "3:18" },
+const playlists: Playlist[] = [
+  {
+    id: "1",
+    title: "Coding Beats",
+    owner: "John Doe",
+    image: "https://picsum.photos/seed/coding/100",
+  },
+  {
+    id: "2",
+    title: "Morning Vibes",
+    owner: "Jane Smith",
+    image: "https://picsum.photos/seed/morning/100",
+  },
+  {
+    id: "3",
+    title: "Focus Flow",
+    owner: "LoFi Studio",
+    image: "https://picsum.photos/seed/focus/100",
+  },
+  {
+    id: "4",
+    title: "Synth Nights",
+    owner: "DJ Retro",
+    image: "https://picsum.photos/seed/synth/100",
+  },
 ];
 
 export default function PlaylistScreen() {
+  const router = useRouter();
+
   return (
     <SafeAreaView style={styles.safe}>
-      <ScrollView showsVerticalScrollIndicator={false}>
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity>
-            <Ionicons name="chevron-back" size={24} color="#fff" />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Playlist</Text>
-          <TouchableOpacity>
-            <Ionicons name="ellipsis-vertical" size={22} color="#fff" />
-          </TouchableOpacity>
-        </View>
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>Your Playlists</Text>
+        <TouchableOpacity>
+          <Ionicons name="search" size={22} color="#fff" />
+        </TouchableOpacity>
+      </View>
 
-        {/* Playlist Cover */}
-        <View style={styles.coverSection}>
-          <Image
-            source={{ uri: "https://picsum.photos/seed/playlistcover/500" }}
-            style={styles.coverImage}
-          />
-          <Text style={styles.playlistTitle}>Coding Beats</Text>
-          <Text style={styles.playlistMeta}>Created by John Doe • 50 songs</Text>
-        </View>
-
-        {/* Buttons */}
-        <View style={styles.buttonRow}>
-          <TouchableOpacity style={styles.iconBtn}>
-            <Ionicons name="heart-outline" size={22} color="#fff" />
+      <FlatList
+        data={playlists}
+        keyExtractor={(item) => item.id}
+        contentContainerStyle={{ paddingHorizontal: 20 }}
+        ItemSeparatorComponent={() => <View style={{ height: 16 }} />}
+        renderItem={({ item }) => (
+          <TouchableOpacity
+            style={styles.playlistRow}
+            onPress={() => router.push(`/tabs/${item.id}`)} // Adjust route to your file location
+          >
+            <Image source={{ uri: item.image }} style={styles.playlistImage} />
+            <View style={styles.playlistTextContainer}>
+              <Text style={styles.playlistTitle}>{item.title}</Text>
+              <Text style={styles.playlistOwner}>By {item.owner}</Text>
+            </View>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.iconBtn}>
-            <Ionicons name="download-outline" size={22} color="#fff" />
-          </TouchableOpacity>
-          <View style={{ flex: 1 }} />
-          <TouchableOpacity style={[styles.playBtn, { backgroundColor: "#1db954" }]}>
-            <Ionicons name="play" size={22} color="#fff" />
-          </TouchableOpacity>
-          <TouchableOpacity style={[styles.playBtn, { backgroundColor: "#333" }]}>
-            <Ionicons name="shuffle" size={22} color="#fff" />
-          </TouchableOpacity>
-        </View>
-
-        {/* Track List */}
-        <FlatList
-          data={tracks}
-          keyExtractor={(item) => item.id}
-          scrollEnabled={false}
-          contentContainerStyle={{ paddingHorizontal: 20, paddingVertical: 10 }}
-          ItemSeparatorComponent={() => <View style={{ height: 16 }} />}
-          renderItem={({ item, index }) => (
-            <TouchableOpacity style={styles.trackRow}>
-              <Text style={styles.trackIndex}>{index + 1}</Text>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.trackTitle}>{item.title}</Text>
-                <Text style={styles.trackArtist}>{item.artist}</Text>
-              </View>
-              <Text style={styles.trackDuration}>{item.duration}</Text>
-            </TouchableOpacity>
-          )}
-        />
-        <View style={{ height: 60 }} />
-      </ScrollView>
+        )}
+      />
     </SafeAreaView>
   );
 }
@@ -96,85 +83,41 @@ const styles = StyleSheet.create({
   safe: {
     flex: 1,
     backgroundColor: "#0e0f13",
+    paddingTop: 20,
   },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    alignItems: "center",
-  },
-  headerTitle: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "700",
-  },
-
-  coverSection: {
-    alignItems: "center",
-    marginTop: 12,
-    marginBottom: 16,
-  },
-  coverImage: {
-    width: 220,
-    height: 220,
-    borderRadius: 10,
-    marginBottom: 16,
-  },
-  playlistTitle: {
-    color: "#fff",
-    fontSize: 22,
-    fontWeight: "800",
-    textAlign: "center",
-  },
-  playlistMeta: {
-    color: "#bbb",
-    fontSize: 13,
-    marginTop: 4,
-  },
-
-  buttonRow: {
-    flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 20,
     marginBottom: 20,
-    gap: 12,
   },
-  iconBtn: {
-    padding: 8,
-    borderRadius: 999,
-    backgroundColor: "rgba(255,255,255,0.08)",
+  headerTitle: {
+    color: "#fff",
+    fontSize: 22,
+    fontWeight: "700",
   },
-  playBtn: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-
-  trackRow: {
+  playlistRow: {
     flexDirection: "row",
     alignItems: "center",
   },
-  trackIndex: {
-    color: "#bbb",
-    width: 28,
-    textAlign: "center",
+  playlistImage: {
+    width: 60,
+    height: 60,
+    borderRadius: 6,
+    marginRight: 16,
   },
-  trackTitle: {
+  playlistTextContainer: {
+    flex: 1,
+  },
+  playlistTitle: {
     color: "#fff",
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: "600",
   },
-  trackArtist: {
+  playlistOwner: {
     color: "#aaa",
     fontSize: 13,
-    marginTop: 2,
-  },
-  trackDuration: {
-    color: "#bbb",
-    fontSize: 13,
-    marginLeft: 8,
+    marginTop: 4,
   },
 });
