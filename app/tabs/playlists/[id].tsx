@@ -6,43 +6,75 @@ import {
   FlatList,
   StyleSheet,
   TouchableOpacity,
+  TextInput,
   Alert,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
-// Mock database of songs
-const allSongs = [
-  { id: "1", title: "Chill Mode", artist: "LoFi DJ" },
-  { id: "2", title: "Focus Flow", artist: "Chillhop" },
-  { id: "3", title: "Coding Vibes", artist: "SynthwaveX" },
-  { id: "4", title: "Morning Boost", artist: "LoFi Chill" },
-];
-
 export default function PlaylistDetailScreen() {
-  const { id } = useLocalSearchParams(); // gets playlist ID from URL
-  const [songs, setSongs] = useState(allSongs.slice(0, 2)); // initial songs
+  const { id } = useLocalSearchParams();
+
+  const [songs, setSongs] = useState<{ id: string; title: string; artist: string }[]>([]);
+
+  const [newTitle, setNewTitle] = useState("");
+  const [newArtist, setNewArtist] = useState("");
+
+  const generateId = () => Math.random().toString(36).substr(2, 9);
 
   const addSong = () => {
-    const remaining = allSongs.filter((s) => !songs.find((item) => item.id === s.id));
-    if (remaining.length === 0) {
-      Alert.alert("No more songs to add");
+    if (!newTitle.trim() || !newArtist.trim()) {
+      Alert.alert("Please enter both song title and artist");
       return;
     }
-    setSongs([...songs, remaining[0]]);
+
+    const newSong = {
+      id: generateId(),
+      title: newTitle.trim(),
+      artist: newArtist.trim(),
+    };
+
+    setSongs((prev) => [...prev, newSong]);
+    setNewTitle("");
+    setNewArtist("");
   };
 
   const removeSong = (id: string) => {
-    setSongs(songs.filter((song) => song.id !== id));
+    setSongs((prev) => prev.filter((song) => song.id !== id));
   };
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Playlist {id}</Text>
+      <Text style={styles.title}>Songs {id}</Text>
+
+      {/* Add new song inputs */}
+      <View style={styles.inputRow}>
+        <TextInput
+          placeholder="Song Title"
+          placeholderTextColor="#666"
+          style={styles.input}
+          value={newTitle}
+          onChangeText={setNewTitle}
+          returnKeyType="next"
+          onSubmitEditing={() => {}}
+        />
+        <TextInput
+          placeholder="Artist"
+          placeholderTextColor="#666"
+          style={styles.input}
+          value={newArtist}
+          onChangeText={setNewArtist}
+          returnKeyType="done"
+          onSubmitEditing={addSong}
+        />
+        <TouchableOpacity onPress={addSong} style={styles.addButton}>
+          <Ionicons name="add-circle" size={32} color="#1db954" />
+        </TouchableOpacity>
+      </View>
 
       <FlatList
         data={songs}
         keyExtractor={(item) => item.id}
-        contentContainerStyle={{ paddingHorizontal: 20 }}
+        contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 10 }}
         ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
         renderItem={({ item }) => (
           <View style={styles.songRow}>
@@ -55,12 +87,10 @@ export default function PlaylistDetailScreen() {
             </TouchableOpacity>
           </View>
         )}
+        ListEmptyComponent={() => (
+          <Text style={styles.emptyText}>No songs added yet.</Text>
+        )}
       />
-
-      <TouchableOpacity style={styles.addButton} onPress={addSong}>
-        <Ionicons name="add-circle" size={26} color="#fff" />
-        <Text style={styles.addText}>Add Song</Text>
-      </TouchableOpacity>
     </View>
   );
 }
@@ -78,6 +108,23 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     marginBottom: 20,
   },
+  inputRow: {
+    flexDirection: "row",
+    paddingHorizontal: 20,
+    alignItems: "center",
+  },
+  input: {
+    flex: 1,
+    height: 40,
+    backgroundColor: "#1a1a1a",
+    borderRadius: 8,
+    color: "#fff",
+    paddingHorizontal: 12,
+    marginRight: 10,
+  },
+  addButton: {
+    paddingVertical: 4,
+  },
   songRow: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -93,20 +140,10 @@ const styles = StyleSheet.create({
     fontSize: 13,
     marginTop: 2,
   },
-  addButton: {
-    marginTop: 30,
-    backgroundColor: "#1db954",
-    flexDirection: "row",
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 14,
-    marginHorizontal: 20,
-    borderRadius: 8,
-  },
-  addText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "600",
-    marginLeft: 8,
+  emptyText: {
+    color: "#777",
+    textAlign: "center",
+    marginTop: 20,
+    fontStyle: "italic",
   },
 });
