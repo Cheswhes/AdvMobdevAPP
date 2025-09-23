@@ -5,20 +5,27 @@ import { Platform } from "react-native";
 
 import { HapticTab } from "@/components/HapticTab";
 import { IconSymbol } from "@/components/ui/IconSymbol";
-import { Colors } from "@/constants/Colors";
-import { useColorScheme } from "@/hooks/useColorScheme";
+import { ThemeProvider, useTheme } from "@/context/Themecontext";
 
 export default function TabLayout() {
-  const colorScheme = useColorScheme();
+  return (
+    <ThemeProvider>
+      <ThemedTabs />
+    </ThemeProvider>
+  );
+}
+
+function ThemedTabs() {
+  const { colors } = useTheme();
 
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: Colors[colorScheme ?? "light"].tint,
+        tabBarActiveTintColor: colors.tint,
         tabBarButton: HapticTab,
         tabBarStyle: {
-          backgroundColor: "black", // black tab bar
+          backgroundColor: colors.background,
           borderTopWidth: 0,
           position: Platform.OS === "ios" ? "absolute" : "relative",
         },
@@ -50,16 +57,6 @@ export default function TabLayout() {
           title: "Profile",
           tabBarIcon: ({ color }) => (
             <IconSymbol size={28} name="person.fill" color={color} />
-          ),
-        }}
-      />
-
-      <Tabs.Screen
-        name="spotseting"
-        options={{
-          title: "Settings",
-          tabBarIcon: ({ color }) => (
-            <IconSymbol size={28} name="gearshape.fill" color={color} />
           ),
         }}
       />
