@@ -47,8 +47,15 @@ Week 5 Act 1;
 
 
 Week 5 Act 2;
-
+(Added a camera/library option for the profile picture)
 <img width="405" height="850" alt="Screenshot_20250925_134806" src="https://github.com/user-attachments/assets/2682774a-5973-42fc-9c09-b5c67ba5c583" />
+
+
+
+
+
+
+
 
 
 
