@@ -38,11 +38,18 @@ Week 4 Act 2:
 
 
 Week 5 Act 1;
+(Started working on light/dark Mode)
 
 
 <img width="405" height="850" alt="Screenshot_20250923_135617" src="https://github.com/user-attachments/assets/631867d6-5240-4a14-9b62-74f25e6954c5" />
 <img width="405" height="850" alt="Screenshot_20250923_135608" src="https://github.com/user-attachments/assets/8d5d1170-c84a-44de-8ddb-c7d49a39c7c8" />
 <img width="405" height="850" alt="Screenshot_20250923_135554" src="https://github.com/user-attachments/assets/97254161-8672-4ef8-a1a0-8369de6db50f" />
+
+
+Week 5 Act 2;
+
+<img width="405" height="850" alt="Screenshot_20250925_134806" src="https://github.com/user-attachments/assets/2682774a-5973-42fc-9c09-b5c67ba5c583" />
+
 
 
 
