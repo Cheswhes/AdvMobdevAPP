@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -6,10 +6,15 @@ import {
   SafeAreaView,
   ScrollView,
   TouchableOpacity,
-  Image,
   TextInput,
+  Image,
+  Modal,
+  FlatList,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import * as ImagePicker from "expo-image-picker";
+import * as ImageManipulator from "expo-image-manipulator";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -17,25 +22,38 @@ import Animated, {
   withTiming,
   FadeIn,
 } from "react-native-reanimated";
-import { useTheme } from "@/context/Themecontext"; // ✅ lowercase "c"
+import { useTheme } from "@/context/Themecontext";
 
-const GENRES = ["Pop", "Rock", "Jazz", "Classical", "Hip-Hop"];
+const GENRES = ["Pop", "Rock", "Hip-Hop", "Jazz", "Classical", "EDM"];
+
+const FILTERS = [
+  { name: "Normal", actions: [] },
+  { name: "Brighten", actions: [{ brighten: 0.3 }] },
+  { name: "Darken", actions: [{ brighten: -0.3 }] },
+  { name: "Contrast+", actions: [{ contrast: 1.5 }] },
+  { name: "Contrast-", actions: [{ contrast: 0.7 }] },
+];
 
 export default function ProfileScreen() {
-  const { theme, colors, toggleTheme } = useTheme(); // ✅ useTheme
+  const { theme, colors, toggleTheme } = useTheme();
+
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [genre, setGenre] = useState("");
   const [errors, setErrors] = useState({});
-  const [showForm, setShowForm] = useState(false); // ✅ collapsible state
+  const [showForm, setShowForm] = useState(false);
 
-  // shake values
+  const [avatar, setAvatar] = useState(null);
+  const [filteredUri, setFilteredUri] = useState(null);
+  const [filterModal, setFilterModal] = useState(false);
+  const [pickerModal, setPickerModal] = useState(false);
+
   const usernameShake = useSharedValue(0);
   const emailShake = useSharedValue(0);
   const genreShake = useSharedValue(0);
 
-  const shake = (sharedValue) => {
-    sharedValue.value = withSequence(
+  const shake = (sv) => {
+    sv.value = withSequence(
       withTiming(-8, { duration: 50 }),
       withTiming(8, { duration: 50 }),
       withTiming(-6, { duration: 50 }),
@@ -47,18 +65,50 @@ export default function ProfileScreen() {
   const usernameStyle = useAnimatedStyle(() => ({
     transform: [{ translateX: usernameShake.value }],
   }));
-
   const emailStyle = useAnimatedStyle(() => ({
     transform: [{ translateX: emailShake.value }],
   }));
-
   const genreStyle = useAnimatedStyle(() => ({
     transform: [{ translateX: genreShake.value }],
   }));
 
-  // --- Real-time validation ---
+  // Load saved data
+  useEffect(() => {
+    const loadProfile = async () => {
+      try {
+        const savedUsername = await AsyncStorage.getItem("username");
+        const savedEmail = await AsyncStorage.getItem("email");
+        const savedGenre = await AsyncStorage.getItem("genre");
+        const savedAvatar = await AsyncStorage.getItem("avatar");
+
+        if (savedUsername) setUsername(savedUsername);
+        if (savedEmail) setEmail(savedEmail);
+        if (savedGenre) setGenre(savedGenre);
+        if (savedAvatar) {
+          setAvatar(savedAvatar);
+          setFilteredUri(savedAvatar);
+        }
+      } catch (err) {
+        console.log("⚠️ Load profile error:", err);
+      }
+    };
+    loadProfile();
+  }, []);
+
+  const saveProfileToStorage = async () => {
+    try {
+      await AsyncStorage.setItem("username", username);
+      await AsyncStorage.setItem("email", email);
+      await AsyncStorage.setItem("genre", genre);
+      if (filteredUri) await AsyncStorage.setItem("avatar", filteredUri);
+    } catch (err) {
+      console.log("⚠️ Save profile error:", err);
+    }
+  };
+
   const validateField = (field, value) => {
     let message = "";
+
     if (field === "username") {
       if (!/^[a-zA-Z0-9_]{3,20}$/.test(value)) {
         message =
@@ -79,8 +129,9 @@ export default function ProfileScreen() {
     setErrors((prev) => ({ ...prev, [field]: message }));
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     let newErrors = {};
+
     if (!/^[a-zA-Z0-9_]{3,20}$/.test(username)) {
       newErrors.username =
         "Username must be 3–20 characters (letters, numbers, underscores).";
@@ -94,51 +145,102 @@ export default function ProfileScreen() {
       newErrors.genre = "Please select a genre.";
       shake(genreShake);
     }
+
     setErrors(newErrors);
 
     if (Object.keys(newErrors).length === 0) {
+      await saveProfileToStorage();
       console.log("✅ Profile saved!");
-      setShowForm(false); // ✅ collapse after saving
+      setShowForm(false);
+    }
+  };
+
+  const pickImage = async () => {
+    setPickerModal(false);
+    let result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 1,
+    });
+    if (!result.canceled) {
+      setAvatar(result.assets[0].uri);
+      setFilteredUri(result.assets[0].uri);
+      setFilterModal(true);
+    }
+  };
+
+  const openCamera = async () => {
+    setPickerModal(false);
+    let result = await ImagePicker.launchCameraAsync({
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 1,
+    });
+    if (!result.canceled) {
+      setAvatar(result.assets[0].uri);
+      setFilteredUri(result.assets[0].uri);
+      setFilterModal(true);
+    }
+  };
+
+  const applyFilter = async (filter) => {
+    if (!avatar) return;
+    try {
+      const result = await ImageManipulator.manipulateAsync(
+        avatar,
+        filter.actions,
+        { compress: 1, format: ImageManipulator.SaveFormat.PNG }
+      );
+      setFilteredUri(result.uri);
+    } catch (err) {
+      console.error("Filter error:", err);
     }
   };
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
-      <ScrollView
-        contentContainerStyle={styles.container}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Header */}
+      <ScrollView contentContainerStyle={styles.container}>
         <View style={styles.header}>
-          <TouchableOpacity style={styles.iconBtn}>
-            <Ionicons name="chevron-back" size={22} color={colors.text} />
-          </TouchableOpacity>
           <Text style={[styles.headerTitle, { color: colors.text }]}>
             Profile
           </Text>
-          <TouchableOpacity style={styles.iconBtn}>
-            <Ionicons name="settings-outline" size={22} color={colors.text} />
-          </TouchableOpacity>
         </View>
 
-        {/* Profile Preview */}
-        <View style={styles.userSection}>
-          <Image
-            source={require("../../assets/images/avatar.jpeg")}
-            style={styles.avatar}
-          />
-          <Text style={[styles.username, { color: colors.text }]}>
-            {username || "Your Username"}
-          </Text>
-          <Text style={[styles.email, { color: colors.text }]}>
-            {email || "your@email.com"}
-          </Text>
-          <Text style={[styles.genre, { color: colors.text }]}>
-            {genre || "Favorite Genre"}
-          </Text>
+        {/* Profile Card */}
+        <View style={[styles.card, { backgroundColor: colors.inputBg }]}>
+          <View style={styles.profileRow}>
+            <View style={styles.avatarWrapper}>
+              <Image
+                source={
+                  filteredUri
+                    ? { uri: filteredUri }
+                    : require("../../assets/images/avatar.jpeg")
+                }
+                style={styles.avatar}
+              />
+              <TouchableOpacity
+                style={styles.editAvatarBtn}
+                onPress={() => setPickerModal(true)}
+              >
+                <Ionicons name="camera" size={18} color="#fff" />
+              </TouchableOpacity>
+            </View>
+            <View style={{ marginLeft: 16 }}>
+              <Text style={[styles.username, { color: colors.text }]}>
+                {username || "Your Username"}
+              </Text>
+              <Text style={[styles.email, { color: colors.text }]}>
+                {email || "your@email.com"}
+              </Text>
+              <Text style={[styles.genre, { color: colors.text }]}>
+                {genre || "Favorite Genre"}
+              </Text>
+            </View>
+          </View>
         </View>
 
-        {/* Collapsible Edit Button */}
+        {/* Edit Button */}
         <TouchableOpacity
           style={[styles.editBtn, { backgroundColor: colors.primary }]}
           onPress={() => setShowForm((prev) => !prev)}
@@ -148,15 +250,15 @@ export default function ProfileScreen() {
           </Text>
         </TouchableOpacity>
 
-        {/* Collapsible Form */}
+        {/* Form */}
         {showForm && (
-          <View style={styles.form}>
+          <View style={[styles.card, { backgroundColor: colors.inputBg }]}>
             <Text style={[styles.label, { color: colors.text }]}>Username</Text>
             <Animated.View style={usernameStyle}>
               <TextInput
                 style={[
                   styles.input,
-                  { backgroundColor: colors.inputBg, color: colors.text },
+                  { backgroundColor: colors.background, color: colors.text },
                 ]}
                 placeholder="Enter Username"
                 placeholderTextColor="#777"
@@ -167,18 +269,18 @@ export default function ProfileScreen() {
                 }}
               />
             </Animated.View>
-            {errors.username ? (
+            {errors.username && (
               <Animated.Text entering={FadeIn} style={styles.error}>
                 {errors.username}
               </Animated.Text>
-            ) : null}
+            )}
 
             <Text style={[styles.label, { color: colors.text }]}>Email</Text>
             <Animated.View style={emailStyle}>
               <TextInput
                 style={[
                   styles.input,
-                  { backgroundColor: colors.inputBg, color: colors.text },
+                  { backgroundColor: colors.background, color: colors.text },
                 ]}
                 placeholder="Enter Email"
                 placeholderTextColor="#777"
@@ -190,11 +292,11 @@ export default function ProfileScreen() {
                 keyboardType="email-address"
               />
             </Animated.View>
-            {errors.email ? (
+            {errors.email && (
               <Animated.Text entering={FadeIn} style={styles.error}>
                 {errors.email}
               </Animated.Text>
-            ) : null}
+            )}
 
             <Text style={[styles.label, { color: colors.text }]}>
               Favorite Genre
@@ -219,8 +321,7 @@ export default function ProfileScreen() {
                     <Text
                       style={[
                         styles.genreText,
-                        { color: colors.text },
-                        genre === g && { color: "#fff" },
+                        { color: genre === g ? "#fff" : colors.text },
                       ]}
                     >
                       {g}
@@ -229,11 +330,11 @@ export default function ProfileScreen() {
                 ))}
               </View>
             </Animated.View>
-            {errors.genre ? (
+            {errors.genre && (
               <Animated.Text entering={FadeIn} style={styles.error}>
                 {errors.genre}
               </Animated.Text>
-            ) : null}
+            )}
 
             <TouchableOpacity
               style={[styles.saveBtn, { backgroundColor: colors.primary }]}
@@ -244,7 +345,7 @@ export default function ProfileScreen() {
           </View>
         )}
 
-        {/* Dark/Light Mode Button */}
+        {/* Theme Button */}
         <TouchableOpacity
           style={[styles.themeBtn, { borderColor: colors.primary }]}
           onPress={toggleTheme}
@@ -256,138 +357,171 @@ export default function ProfileScreen() {
 
         <View style={{ height: 40 }} />
       </ScrollView>
+
+      {/* Picker Modal */}
+      <Modal visible={pickerModal} animationType="fade" transparent>
+        <View style={styles.pickerModal}>
+          <View style={styles.pickerBox}>
+            <Text style={styles.pickerTitle}>Change Profile Picture</Text>
+            <View style={styles.pickerRow}>
+              <TouchableOpacity style={styles.pickerBtn} onPress={pickImage}>
+                <Ionicons name="image" size={32} color="#fff" />
+                <Text style={styles.pickerText}>Gallery</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.pickerBtn} onPress={openCamera}>
+                <Ionicons name="camera" size={32} color="#fff" />
+                <Text style={styles.pickerText}>Camera</Text>
+              </TouchableOpacity>
+            </View>
+            <TouchableOpacity
+              style={[styles.saveBtn, { backgroundColor: colors.primary }]}
+              onPress={() => setPickerModal(false)}
+            >
+              <Text style={styles.saveText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Filter Modal */}
+      <Modal visible={filterModal} animationType="slide" transparent>
+        <View style={styles.modalContainer}>
+          {filteredUri && (
+            <Image source={{ uri: filteredUri }} style={styles.previewImg} />
+          )}
+          <Text style={styles.filterTitle}>Choose a Filter</Text>
+          <FlatList
+            horizontal
+            data={FILTERS}
+            keyExtractor={(item) => item.name}
+            renderItem={({ item }) => (
+              <TouchableOpacity
+                style={styles.filterBtn}
+                onPress={() => applyFilter(item)}
+              >
+                <Text style={{ color: "#fff" }}>{item.name}</Text>
+              </TouchableOpacity>
+            )}
+          />
+          <TouchableOpacity
+            style={[styles.saveBtn, { backgroundColor: colors.primary }]}
+            onPress={() => setFilterModal(false)}
+          >
+            <Text style={styles.saveText}>Done</Text>
+          </TouchableOpacity>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: {
-    flex: 1,
+  safe: { flex: 1 },
+  container: { paddingBottom: 16 },
+  header: { padding: 20 },
+  headerTitle: { fontSize: 24, fontWeight: "700" },
+  card: {
+    borderRadius: 12,
+    padding: 16,
+    marginHorizontal: 16,
+    marginTop: 12,
+    shadowColor: "#000",
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    elevation: 3,
   },
-  container: {
-    paddingBottom: 16,
+  profileRow: { flexDirection: "row", alignItems: "center" },
+  avatarWrapper: { position: "relative" },
+  avatar: { width: 100, height: 100, borderRadius: 50 },
+  editAvatarBtn: {
+    position: "absolute",
+    bottom: 0,
+    right: 0,
+    backgroundColor: "#0008",
+    padding: 6,
+    borderRadius: 20,
   },
-  header: {
-    paddingHorizontal: 24,
-    paddingTop: 8,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-  },
-  iconBtn: {
-    padding: 8,
-    borderRadius: 999,
-  },
-
-  // Profile Preview
-  userSection: {
-    alignItems: "center",
-    marginTop: 20,
-  },
-  avatar: {
-    width: 90,
-    height: 90,
-    borderRadius: 45,
-    marginBottom: 12,
-  },
-  username: {
-    fontSize: 20,
-    fontWeight: "700",
-  },
-  email: {
-    fontSize: 14,
-    marginTop: 2,
-  },
-  genre: {
-    fontSize: 14,
-    marginTop: 4,
-    fontStyle: "italic",
-  },
-
-  // Collapsible Button
+  username: { fontSize: 18, fontWeight: "700" },
+  email: { fontSize: 14, opacity: 0.7 },
+  genre: { fontSize: 14, marginTop: 4 },
   editBtn: {
-    paddingVertical: 12,
+    marginHorizontal: 16,
+    marginTop: 16,
     borderRadius: 8,
+    paddingVertical: 12,
     alignItems: "center",
-    marginHorizontal: 24,
-    marginTop: 20,
   },
-  editBtnText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "700",
-  },
-
-  // Form
-  form: {
-    marginTop: 20,
-    paddingHorizontal: 24,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: "600",
-    marginBottom: 6,
-  },
+  editBtnText: { color: "#fff", fontWeight: "600", fontSize: 16 },
+  label: { fontSize: 14, fontWeight: "600", marginTop: 12 },
   input: {
     borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    marginBottom: 8,
+    padding: 12,
+    marginTop: 6,
+    fontSize: 14,
   },
-  error: {
-    color: "#ff6b6b",
-    fontSize: 12,
-    marginBottom: 12,
-  },
-
-  // Genre Buttons
-  genreRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-    marginBottom: 16,
-  },
+  error: { color: "red", fontSize: 12, marginTop: 4 },
+  genreRow: { flexDirection: "row", flexWrap: "wrap", marginTop: 8 },
   genreBtn: {
     borderWidth: 1,
+    borderColor: "#aaa",
     borderRadius: 20,
     paddingVertical: 6,
-    paddingHorizontal: 14,
-    marginRight: 8,
-    marginBottom: 8,
+    paddingHorizontal: 12,
+    margin: 4,
   },
-  genreText: {
-    fontSize: 13,
-    fontWeight: "600",
-  },
-
-  // Save Button
+  genreText: { fontSize: 14 },
   saveBtn: {
-    paddingVertical: 12,
+    marginTop: 16,
     borderRadius: 8,
     alignItems: "center",
-    marginTop: 8,
+    paddingVertical: 12,
   },
-  saveText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "700",
-  },
-
-  // Theme Button
+  saveText: { color: "#fff", fontWeight: "600" },
   themeBtn: {
     marginTop: 20,
-    marginHorizontal: 24,
+    marginHorizontal: 16,
     borderWidth: 2,
     borderRadius: 8,
     alignItems: "center",
     paddingVertical: 12,
   },
-  themeBtnText: {
-    fontSize: 16,
-    fontWeight: "600",
+  themeBtnText: { fontSize: 16, fontWeight: "600" },
+  pickerModal: {
+    flex: 1,
+    backgroundColor: "#0008",
+    justifyContent: "center",
+    alignItems: "center",
   },
+  pickerBox: {
+    backgroundColor: "#222",
+    padding: 20,
+    borderRadius: 12,
+    width: "80%",
+    alignItems: "center",
+  },
+  pickerTitle: { color: "#fff", fontSize: 18, marginBottom: 16 },
+  pickerRow: { flexDirection: "row", justifyContent: "space-around", width: "100%" },
+  pickerBtn: { alignItems: "center", marginHorizontal: 16 },
+  pickerText: { color: "#fff", marginTop: 6 },
+  modalContainer: {
+    flex: 1,
+    backgroundColor: "#000c",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
+  filterTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    marginBottom: 12,
+    color: "#fff",
+  },
+  filterBtn: {
+    backgroundColor: "#333",
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    margin: 6,
+    borderRadius: 6,
+  },
+  previewImg: { width: 200, height: 200, borderRadius: 100, marginBottom: 20 },
 });
