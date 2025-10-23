@@ -61,6 +61,14 @@ Week 5 Act 2;
 
 
 
+Week 6 Act 2
+
+(Added a Map For the spotify app that can access location)
+
+<img width="434" height="866" alt="image" src="https://github.com/user-attachments/assets/de81cf45-ae07-46b2-bd49-3a17edf1e43e" />
+
+
+
 
 
 
