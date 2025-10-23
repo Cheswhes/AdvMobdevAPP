@@ -60,6 +60,17 @@ function ThemedTabs() {
           ),
         }}
       />
+
+      <Tabs.Screen
+         name="map"
+         options={{
+            title: "Map",
+            tabBarIcon: ({ color }) => (
+              <IconSymbol size={28} name="person.fill" color={color} />
+              ),
+         }}
+       />
+
     </Tabs>
   );
 }
